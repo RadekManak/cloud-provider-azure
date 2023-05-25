@@ -42,5 +42,19 @@ while read -r message; do
   echo "$message"
 done < <(git log "$check_base".."$check_sha" --pretty=%s --no-merges)
 
+if [[ "$CI" == "true" ]]; then
+    echo "Comparing ${PULL_BASE_REF}=$(git rev-parse --verify ${PULL_BASE_REF}^1) and ${PULL_BASE_SHA}"
+    echo git log for debugging
+    git log --all --decorate --oneline --graph
+    if [[ "$(git rev-parse --verify ${PULL_BASE_REF}^1)" != "$PULL_BASE_SHA" ]]; then
+        echo "Only pull requests that are based on the latest commit on the base branch are allowed to merge. To fix this, rebase your pull request."
+        echo
+        echo "Additional commits on ${PULL_BASE_REF} that are not included in this PR:"
+        git log ${PULL_BASE_REF} ^${PULL_PULL_SHA}
+        exit 1
+    fi
+    echo "This PR includes all commits from base branch."
+fi
+
 echo
 echo "All looks good"
